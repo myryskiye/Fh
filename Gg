@@ -1,0 +1,56 @@
+name: Deploy Node.js app
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'  # Możesz dostosować wersję Node.js
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm install
+
+      - name: Run the application
+        run: |
+          cd backend
+          npm start
+        env:
+          PORT: 5000  # Możesz dostosować port, na którym będzie działał backend
+git init
+git add .
+git commit -m "Initial commit"
+git branch -M main
+git remote add origin 
+
+Europe Exchange Dex - Updated Functionality
+
+1. High-Risk Token Exchange:
+   - The platform allows users to exchange cryptocurrencies or tokens of the highest risk, including potential scam tokens.
+   - Users can sell tokens received from unknown sources, even if these tokens are not accepted by other exchanges.
+   - The implementation ensures that all tokens, regardless of their perceived legitimacy, can be traded.
+   - This functionality eliminates the risk of financial loss for users caused by the inability to sell certain tokens.
+
+2. Independence from Other Platforms:
+   - The exchange does not consider or rely on opinions from other platforms about token legitimacy or risks.
+   - Every token with tradeable value is treated equally, ensuring a user-friendly and inclusive environment.
+
+3. Implementation Notes:
+   - Custom smart contract logic enables the seamless exchange of any token type.
+   - Security measures are in place to protect users from malicious contracts, while still allowing free trading.
+
+Please contact us for further technical details or implementation guidance.
+
+git push -u origin main
