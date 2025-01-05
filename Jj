@@ -1,0 +1,15 @@
+1. High-Risk Token Exchange:
+   - The platform allows users to exchange cryptocurrencies or tokens of the highest risk, including potential scam tokens.
+   - Users can sell tokens received from unknown sources, even if these tokens are not accepted by other exchanges.
+   - The implementation ensures that all tokens, regardless of their perceived legitimacy, can be traded.
+   - This functionality eliminates the risk of financial loss for users caused by the inability to sell certain tokens.
+
+2. Independence from Other Platforms:
+   - The exchange does not consider or rely on opinions from other platforms about token legitimacy or risks.
+   - Every token with tradeable value is treated equally, ensuring a user-friendly and inclusive environment.
+
+3. Implementation Notes:
+   - Custom smart contract logic enables the seamless exchange of any token type.
+   - Security measures are in place to protect users from malicious contracts, while still allowing free trading.
+
+Please contact us for further technical details or implementation guidance.
