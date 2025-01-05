@@ -1,0 +1,272 @@
+
+// Backend API (Express)
+// backend/server.js
+const express = require("express");
+const bodyParser = require("body-parser");
+const { approveToken, logTransaction, fetchTransactionHistory } = require("./controllers/tokenController");
+
+const app = express();
+const port = 5000;
+
+app.use(bodyParser.json());
+
+app.post("/api/tokens/approve", approveToken);
+app.post("/api/transactions/log", logTransaction);
+app.get("/api/transactions", fetchTransactionHistory);
+
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
+});
+
+// Controllers (backend/controllers/tokenController.js)
+const tokens = [];
+const transactions = [];
+
+const approveToken = (req, res) => {
+  const { address, owner } = req.body;
+  if (owner !== "yourWalletAddress") {
+    return res.status(403).json({ error: "Only the owner can approve tokens." });
+  }
+  tokens.push({ address, owner });
+  res.status(200).json({ message: "Token approved", token: { address, owner } });
+};
+
+const logTransaction = (req, res) => {
+  const { user, tokenAddress, amount, type } = req.body;
+  const newTransaction = { user, tokenAddress, amount, type, createdAt: new Date() };
+  transactions.push(newTransaction);
+  res.status(200).json({ message: "Transaction logged", transaction: newTransaction });
+};
+
+const fetchTransactionHistory = (req, res) => {
+  res.status(200).json(transactions);
+};
+
+// Frontend (React)
+// frontend/src/components/WalletConnect.js
+import { useState } from "react";
+import { ethers } from "ethers";
+import { Connection, PublicKey } from "@solana/web3.js";
+
+const WalletConnect = ({ onConnect }) => {
+  const [bscWallet, setBscWallet] = useState(null);
+  const [solanaWallet, setSolanaWallet] = useState(null);
+
+  const connectMetaMask = async () => {
+    if (window.ethereum) {
+      try {
+        const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+        setBscWallet(accounts[0]);
+        onConnect("bsc", accounts[0]);
+      } catch (err) {
+        console.error("MetaMask connection error:", err);
+      }
+    } else {
+      alert("MetaMask is not installed.");
+    }
+  };
+
+  const connectPhantom = async () => {
+    if (window.solana && window.solana.isPhantom) {
+      try {
+        const response = await window.solana.connect();
+        setSolanaWallet(response.publicKey.toString());
+        onConnect("solana", response.publicKey.toString());
+      } catch (err) {
+        console.error("Phantom connection error:", err);
+      }
+    } else {
+      alert("Phantom Wallet is not installed.");
+    }
+  };
+
+  return (
+    <div>
+      <button onClick={connectMetaMask}>Connect MetaMask</button>
+      <button onClick={connectPhantom}>Connect Phantom</button>
+      {bscWallet && <p>Connected to BSC: {bscWallet}</p>}
+      {solanaWallet && <p>Connected to Solana: {solanaWallet}</p>}
+    </div>
+  );
+};
+
+export default WalletConnect;
+
+// frontend/src/components/TokenApproval.js
+import { useState } from "react";
+import { approveToken } from "../services/api";
+
+const TokenApproval = () => {
+  const [tokenAddress, setTokenAddress] = useState("");
+  const [ownerAddress, setOwnerAddress] = useState("");
+
+  const handleApprove = async () => {
+    try {
+      const response = await approveToken({ address: tokenAddress, owner: ownerAddress });
+      alert("Token approved: " + response.token.address);
+    } catch (err) {
+      console.error("Approval error:", err);
+    }
+  };
+
+  return (
+    <div>
+      <h3>Approve Token</h3>
+      <input
+        type="text"
+        placeholder="Token Address"
+        value={tokenAddress}
+        onChange={(e) => setTokenAddress(e.target.value)}
+      />
+      <input
+        type="text"
+        placeholder="Owner Address"
+        value={ownerAddress}
+        onChange={(e) => setOwnerAddress(e.target.value)}
+      />
+      <button onClick={handleApprove}>Approve</button>
+    </div>
+  );
+};
+
+export default TokenApproval;
+
+// frontend/src/components/Swap.js
+import { useState } from "react";
+
+const Swap = ({ wallet }) => {
+  const [amount, setAmount] = useState("");
+  const [fromToken, setFromToken] = useState("");
+  const [toToken, setToToken] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSwap = async () => {
+    setLoading(true);
+
+    try {
+      if (wallet.network === "bsc") {
+        await swapTokensBSC(fromToken, toToken, amount, wallet.address);
+        alert("Token swapped on BSC!");
+      } else if (wallet.network === "solana") {
+        await swapTokensSolana(fromToken, toToken, amount, wallet.address);
+        alert("Token swapped on Solana!");
+      }
+    } catch (err) {
+      console.error("Swap error:", err);
+      alert("Swap error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <h3>Swap Tokens</h3>
+      <input
+        type="text"
+        placeholder="From Token (address)"
+        value={fromToken}
+        onChange={(e) => setFromToken(e.target.value)}
+      />
+      <input
+        type="text"
+        placeholder="To Token (address)"
+        value={toToken}
+        onChange={(e) => setToToken(e.target.value)}
+      />
+      <input
+        type="number"
+        placeholder="Amount"
+        value={amount}
+        onChange={(e) => setAmount(e.target.value)}
+      />
+      <button onClick={handleSwap} disabled={loading}>
+        {loading ? "Swapping..." : "Swap"}
+      </button>
+    </div>
+  );
+};
+
+export default Swap;
+
+// frontend/src/components/TransactionHistory.js
+import { useEffect, useState } from "react";
+import { fetchTransactionHistory } from "../services/api";
+
+const TransactionHistory = () => {
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const response = await fetchTransactionHistory();
+        setTransactions(response);
+      } catch (error) {
+        console.error("Error fetching transaction history:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHistory();
+  }, []);
+
+  if (loading) {
+    return <p>Loading transaction history...</p>;
+  }
+
+  return (
+    <div>
+      <h3>Transaction History</h3>
+      {transactions.length === 0 ? (
+        <p>No transactions</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Token</th>
+              <th>Amount</th>
+              <th>Type</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {transactions.map((transaction, index) => (
+              <tr key={index}>
+                <td>{transaction.user}</td>
+                <td>{transaction.tokenAddress}</td>
+                <td>{transaction.amount}</td>
+                <td>{transaction.type}</td>
+                <td>{new Date(transaction.createdAt).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+};
+
+export default TransactionHistory;
+
+// backend/services/api.js
+import axios from "axios";
+
+const API_URL = "http://localhost:5000/api";
+
+export const approveToken = async (tokenData) => {
+  const response = await axios.post(`${API_URL}/tokens/approve`, tokenData);
+  return response.data;
+};
+
+export const logTransaction = async (transactionData) => {
+  const response = await axios.post(`${API_URL}/transactions/log`, transactionData);
+  return response.data;
+};
+
+export const fetchTransactionHistory = async () => {
+  const response = await axios.get(`${API_URL}/transactions`);
+  return response.data;
+};
